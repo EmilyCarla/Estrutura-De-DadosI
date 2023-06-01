@@ -1,236 +1,253 @@
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Stack;
-import java.util.Scanner;
+import java.util.*;
 
+public class Calculadora {
 
-//put-adicionar // remove-remover // get-recuperar // 
+    private static final Map<Character, Integer> precedenciaOperadores = new HashMap<>();
 
-public class Calculadora{
-
-    private static void procedenciaOperadores(){
-        HashMap<Character, Character> procedencias = new HashMap<Character, Character>();
-
-        procedencias.put('+' , '1');
-        procedencias.put('-' , '1');
-        procedencias.put('*' , '2');
-        procedencias.put('/' , '2');
-        procedencias.put('^' , '3');
+    static {
+        precedenciaOperadores.put('+', 1);
+        precedenciaOperadores.put('-', 1);
+        precedenciaOperadores.put('*', 2);
+        precedenciaOperadores.put('/', 2);
     }
 
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
 
-    public static String converterInfixaParaPreFixa(String expressaoInfixa, HashMap<Character, Character> procedenciaOperadores){
-        StringBuilder preFixa = new StringBuilder();
-        Stack<Character> pilhaOperadores = new Stack<>();
-        expressaoInfixa = inverterString(expressaoInfixa);
+        System.out.print("Digite a expressão: ");
+        String expressao = scanner.nextLine();
 
-        for(char elemento : expressaoInfixa.toCharArray()){
-            if(elemento == '('){
-                preFixa.append(')');
-            }else if (elemento == ')'){
-                preFixa.append('(');
-            }else if(Character.isLetterOrDigit(elemento)){
-                preFixa.append(elemento);
-            }else{
-                while (!pilhaOperadores.isEmpty() && procedenciaOperadores.get(elemento) < procedenciaOperadores.get(pilhaOperadores.peek())) {
-                    preFixa.append(pilhaOperadores.pop());
-            }
-            pilhaOperadores.push(elemento);
+        System.out.print("Digite a notação (infixa, pós-fixa ou pré-fixa): ");
+        String notacao = scanner.nextLine();
+
+        double resultado;
+
+        if (notacao.equals("infixa")) {
+            String posfixa = converterInfixaParaPosfixa(expressao);
+            resultado = calcularPosfixa(posfixa);
+            String prefixa = converterPosfixaParaPrefixa(posfixa);
+
+            System.out.println("Expressão em notação pós-fixa: " + posfixa);
+            System.out.println("Expressão em notação pré-fixa: " + prefixa);
+        } else if (notacao.equals("pós-fixa")) {
+            resultado = calcularPosfixa(expressao);
+            String infixa = converterPosfixaParaInfixa(expressao);
+            String prefixa = converterPosfixaParaPrefixa(expressao);
+
+            System.out.println("Expressão em notação infixa: " + infixa);
+            System.out.println("Expressão em notação pré-fixa: " + prefixa);
+        } else if (notacao.equals("pré-fixa")) {
+            resultado = calcularPrefixa(expressao);
+            String infixa = converterPrefixaParaInfixa(expressao);
+            String posfixa = converterPrefixaParaPosfixa(expressao);
+
+            System.out.println("Expressão em notação infixa: " + infixa);
+            System.out.println("Expressão em notação pós-fixa: " + posfixa);
+        } else {
+            System.out.println("Notação inválida!");
+            return;
         }
-    }
-    while(!pilhaOperadores.isEmpty()){
-        preFixa.append(pilhaOperadores.pop());
-    }
-    return inverterString(preFixa.toString());
+
+        System.out.println("Resultado: " + resultado);
     }
 
-    //metodo para inverter a String 
-    public static String inverterString(String string){
-        return new StringBuilder(string).reverse().toString();
-    }
+    public static String converterInfixaParaPosfixa(String expressao) {
+        StringBuilder posfixa = new StringBuilder();
+        Stack<Character> pilha = new Stack<>();
 
+        for (int i = 0; i < expressao.length(); i++) {
+            char caractere = expressao.charAt(i);
 
-    public static String converterInfixaParaPosFixa(String expressaoInfixa, HashMap<Character, Character> procedenciaOperadores ){
-        HashMap<String, String> procedencias = new HashMap<String, String>();
-        
-        StringBuilder posFixa = new StringBuilder();
-        Stack<Character> pilhaOperadores = new Stack<>();
-        char[] elementos = expressaoInfixa.toCharArray();
-
-        for(int i=0; i<elementos.length; i++){
-            char elemento = elementos[i];
-            if(Character.isLetterOrDigit(elemento)){
-                posFixa.append(elemento);
-            }else if(elemento == '('){
-                pilhaOperadores.push(elemento);
-            }else if(elemento ==')'){
-                while(!pilhaOperadores.isEmpty() && pilhaOperadores.peek() != '('){
-                    posFixa.append(pilhaOperadores.pop());
+            if (Character.isDigit(caractere)) {
+                posfixa.append(caractere);
+            } else if (caractere == '(') {
+                pilha.push(caractere);
+            } else if (caractere == ')') {
+                while (!pilha.isEmpty() && pilha.peek() != '(') {
+                    posfixa.append(pilha.pop());
                 }
-                if(!pilhaOperadores.isEmpty() && pilhaOperadores.peek() != '('){
+
+                if (!pilha.isEmpty() && pilha.peek() != '(') {
                     throw new IllegalArgumentException("Expressão inválida!");
-                }else{
-                    pilhaOperadores.pop();
                 }
-            }else{
-                 while(!pilhaOperadores.isEmpty() && procedenciaOperadores.get(elemento) <= procedenciaOperadores.get(pilhaOperadores.peek())){
-                   posFixa.append(pilhaOperadores.pop());
-               }
-                pilhaOperadores.push(elemento);
-            }
-        }
-        while(!pilhaOperadores.isEmpty()){
-            posFixa.append(pilhaOperadores.pop());
-        }
-        return posFixa.toString();
-    }
 
+                pilha.pop();
+            } else {
+                while (!pilha.isEmpty() && precedencia(caractere) <= precedencia(pilha.peek())) {
+                    if (pilha.peek() == '(') {
+                        throw new IllegalArgumentException("Expressão inválida!");
+                    }
 
-    public static String converterPreFixaParaInfixa(String expressaoPreFixa, HashMap<Character, Character> procedenciaOperadores){
-        Stack<String> pilhaOperadores = new Stack<>();
-        expressaoPreFixa = inverterString(expressaoPreFixa);
-
-        for(char elemento : expressaoPreFixa.toCharArray()){
-            String operando1, operando2, expressao;
-            if(Character.isLetterOrDigit(elemento)){
-                pilhaOperadores.push(String.valueOf(elemento));
-            }else{
-                operando1 = pilhaOperadores.pop();
-                operando2 = pilhaOperadores.pop();
-                expressao = "(" + operando1 + procedenciaOperadores.get(String.valueOf(elemento)) + operando2 + ")"; 
-                pilhaOperadores.push(expressao);
-            }
-        }
-        return pilhaOperadores.pop();
-    }
-
-    public static String converterPosFixaParaPreFixa(String expressaoPosFixa, HashMap<Character, Character> procedenciaOperadores ){
-        Stack<String> pilhaOperadores = new Stack<>();
-        
-
-        for(char elemento : expressaoPosFixa.toCharArray()){
-            String operando1, operando2, expressao;
-            if(Character.isLetterOrDigit(elemento)){
-                pilhaOperadores.push(String.valueOf(elemento));
-            }else{
-                operando1 = pilhaOperadores.pop();
-                operando2 = pilhaOperadores.pop();
-                expressao = elemento + operando1 + operando2;
-                int procedenciaAtual = procedenciaOperadores.get(elemento);
-
-                while(!pilhaOperadores.isEmpty() && procedenciaOperadores.get(pilhaOperadores.peek()) >= procedenciaAtual){
-                    expressao = pilhaOperadores.pop() + expressao;
+                    posfixa.append(pilha.pop());
                 }
-                pilhaOperadores.push(expressao);
+
+                pilha.push(caractere);
             }
         }
-        return pilhaOperadores.pop();
-    }
 
-    public static String converterPosFixaParaInfixa(String expressaoPosFixa, HashMap<Character, Character> procedenciaOperadores){
-        Stack<String> pilhaOperadores = new Stack<>();
+        while (!pilha.isEmpty()) {
+            if (pilha.peek() == '(') {
+                throw new IllegalArgumentException("Expressão inválida!");
+            }
 
-        for(char elemento : expressaoPosFixa.toCharArray()){
-            String operando1, operando2, expressao;
-            if(Character.isLetterOrDigit(elemento)){
-                pilhaOperadores.push(String.valueOf(elemento));
-            }else{
-                operando1 = pilhaOperadores.pop();
-                operando2 = pilhaOperadores.pop();
-                expressao = "(" + elemento + operando1 + operando2 + ")";
-                pilhaOperadores.push(expressao);
+            posfixa.append(pilha.pop());
         }
+
+        return posfixa.toString();
     }
-    return pilhaOperadores.pop();
+
+    public static double calcularPosfixa(String expressao) {
+        Stack<Double> pilha = new Stack<>();
+
+        for (int i = 0; i < expressao.length(); i++) {
+            char caractere = expressao.charAt(i);
+
+            if (Character.isDigit(caractere)) {
+                pilha.push((double) (caractere - '0'));
+            } else {
+                double operando2 = pilha.pop();
+                double operando1 = pilha.pop();
+
+                switch (caractere) {
+                    case '+':
+                        pilha.push(operando1 + operando2);
+                        break;
+                    case '-':
+                        pilha.push(operando1 - operando2);
+                        break;
+                    case '*':
+                        pilha.push(operando1 * operando2);
+                        break;
+                    case '/':
+                        pilha.push(operando1 / operando2);
+                        break;
+                }
+            }
+        }
+
+        return pilha.pop();
+    }
+
+    public static String converterPosfixaParaInfixa(String expressao) {
+        Stack<String> pilha = new Stack<>();
+
+        for (int i = 0; i < expressao.length(); i++) {
+            char caractere = expressao.charAt(i);
+
+            if (Character.isDigit(caractere)) {
+                pilha.push(Character.toString(caractere));
+            } else {
+                String operando2 = pilha.pop();
+                String operando1 = pilha.pop();
+                String resultado = "(" + operando1 + caractere + operando2 + ")";
+
+                pilha.push(resultado);
+            }
+        }
+
+        return pilha.pop();
+    }
+
+    public static String converterPosfixaParaPrefixa(String expressao) {
+        Stack<String> pilha = new Stack<>();
+
+        for (int i = 0; i < expressao.length(); i++) {
+            char caractere = expressao.charAt(i);
+
+            if (Character.isDigit(caractere)) {
+                pilha.push(Character.toString(caractere));
+            } else {
+                String operando2 = pilha.pop();
+                String operando1 = pilha.pop();
+                String resultado = caractere + operando1 + operando2;
+
+                pilha.push(resultado);
+            }
+        }
+
+        return pilha.pop();
+    }
+
+    public static String converterPrefixaParaInfixa(String expressao) {
+        Stack<String> pilha = new Stack<>();
+
+        for (int i = expressao.length() - 1; i >= 0; i--) {
+            char caractere = expressao.charAt(i);
+
+            if (Character.isDigit(caractere)) {
+                pilha.push(Character.toString(caractere));
+            } else {
+                String operando1 = pilha.pop();
+                String operando2 = pilha.pop();
+                String resultado = "(" + operando1 + caractere + operando2 + ")";
+
+                pilha.push(resultado);
+            }
+        }
+
+        return pilha.pop();
+    }
+
+    public static String converterPrefixaParaPosfixa(String expressao) {
+        Stack<String> pilha = new Stack<>();
+
+        for (int i = expressao.length() - 1; i >= 0; i--) {
+            char caractere = expressao.charAt(i);
+
+            if (Character.isDigit(caractere)) {
+                pilha.push(Character.toString(caractere));
+            } else {
+                String operando1 = pilha.pop();
+                String operando2 = pilha.pop();
+                String resultado = operando1 + operando2 + caractere;
+
+                pilha.push(resultado);
+            }
+        }
+
+        return pilha.pop();
+    }
+
+    public static double calcularPrefixa(String expressao) {
+        Stack<Double> pilha = new Stack<>();
+
+        for (int i = expressao.length() - 1; i >= 0; i--) {
+            char caractere = expressao.charAt(i);
+
+            if (Character.isDigit(caractere)) {
+                pilha.push((double) (caractere - '0'));
+            } else {
+                double operando1 = pilha.pop();
+                double operando2 = pilha.pop();
+
+                switch (caractere) {
+                    case '+':
+                        pilha.push(operando1 + operando2);
+                        break;
+                    case '-':
+                        pilha.push(operando1 - operando2);
+                        break;
+                    case '*':
+                        pilha.push(operando1 * operando2);
+                        break;
+                    case '/':
+                        pilha.push(operando1 / operando2);
+                        break;
+                }
+            }
+        }
+
+        return pilha.pop();
+    }
+
+    public static int precedencia(char operador) {
+        if (operador == '+' || operador == '-')
+            return 1;
+        else if (operador == '*' || operador == '/')
+            return 2;
+        else
+            return 0;
+    }
 }
 
 
-    public static String converterPreFixaParaPosFixa(String expressaoPreFixa, HashMap<Character, Character> procedenciaOperadores){
-        Stack<String> pilhaOperadores = new Stack<>();
-        expressaoPreFixa = inverterString(expressaoPreFixa);
-
-        for(char elemento : expressaoPreFixa.toCharArray()){
-            String operando1, operando2, expressao;
-            if(Character.isLetterOrDigit(elemento)){
-                pilhaOperadores.push(String.valueOf(elemento));
-            }else{
-                operando1 = pilhaOperadores.pop();
-                operando2 = pilhaOperadores.pop();
-                expressao = operando1 + operando2 + elemento;
-
-                while(!pilhaOperadores.isEmpty() && procedenciaOperadores.get(elemento) <= procedenciaOperadores.get(pilhaOperadores.peek().charAt(0))){
-                    expressao = pilhaOperadores.pop() + expressao;
-                }
-                pilhaOperadores.push(expressao);
-            }
-        }
-        return pilhaOperadores.pop();
-    } 
-
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //Calculos
-
-    public static double calcularSoma(double operador1, double operador2) {
-        return operador1 + operador2;
-    }
-    
-    public static double calcularSubtracao(double operador1, double operador2) {
-        return operador1 - operador2;
-    }
-    
-    public static double calcularMultiplicacao(double operador1, double operador2) {
-        return operador1 * operador2;
-    }
-    
-    public static double calcularDivisao(double operador1, double operador2) {
-        if (operador2 == 0) {
-            throw new ArithmeticException("Não é possível dividir por zero!");
-        }
-        return operador1 / operador2;
-    }
-
-    public static double calcularExponenciacao(double operador1, double operador2){
-        return Math.pow(operador1,operador2);
-    }
-    
-
-    public double calcularExpressaoPosFixa(String expressaoPosFixa){
-        Stack<Double> pilhaOperadores = new Stack<>();
-
-        for(char elemento : expressaoPosFixa.toCharArray()){
-            if(Character.isLetterOrDigit(elemento)){
-                pilhaOperadores.push(Double.valueOf(elemento - '0'));
-            } if(elemento == '+'){
-                double operador2 = pilhaOperadores.pop();
-                double operador1 = pilhaOperadores.pop();
-                pilhaOperadores.push(calcularSoma(operador1, operador2));
-            } if (elemento == '-') {
-                double operador2 = pilhaOperadores.pop();
-                double operador1 = pilhaOperadores.pop();
-                pilhaOperadores.push(calcularSubtracao(operador1, operador2));
-            } if (elemento == '*') {
-                double operador2 = pilhaOperadores.pop();
-                double operador1 = pilhaOperadores.pop();
-                pilhaOperadores.push(calcularMultiplicacao(operador1, operador2));
-            } if (elemento == '/') {
-                double operador2 = pilhaOperadores.pop();
-                double operador1 = pilhaOperadores.pop();
-                pilhaOperadores.push(calcularDivisao(operador1, operador2));
-            } else  {
-                throw new IllegalArgumentException("Operador inválido.");
-            } if (elemento == '^'){
-                double operador2 = pilhaOperadores.pop();
-                double operador1 = pilhaOperadores.pop();
-                pilhaOperadores.push(calcularExponenciacao(operador1, operador2));
-            }
-  }
-  return pilhaOperadores.pop();
-}
-}
-//incompleto
-      
-    
-    
-
-  
